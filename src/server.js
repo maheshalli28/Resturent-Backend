@@ -13,12 +13,35 @@ const path = require('path');
 
 const app = express();
 
+// Parse allowed origins from .env, remove whitespace
+const allowedOrigins = (process.env.CLIENT_URL || '*').split(',').map(origin => origin.trim());
+
+// Log origins for debugging
+app.use((req, res, next) => {
+  console.log('Request origin:', req.headers.origin);
+  console.log('Allowed origins:', allowedOrigins);
+  next();
+});
+
+// CORS middleware BEFORE any routes
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl), or if origin is in allowed list
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(helmet());
-app.use(cors({ origin: (process.env.CLIENT_URL || '*').split(','), credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
-// Disable caching for API responses to avoid stale 304s
+
+// Disable caching for API responses
 app.use((req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/products')) {
     res.set('Cache-Control', 'no-store');
@@ -27,6 +50,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+
 app.use('/uploads', express.static(path.join(process.cwd(), 'resturent_backend', 'microservers', 'uploads')));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -44,5 +68,3 @@ connectDB()
     console.error('Failed to connect to DB', err);
     process.exit(1);
   });
-
-
