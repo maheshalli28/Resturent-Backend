@@ -13,27 +13,10 @@ const path = require('path');
 
 const app = express();
 
-// Parse allowed origins from .env, remove whitespace
-const allowedOrigins = (process.env.CLIENT_URL || '*').split(',').map(origin => origin.trim());
-
-// Log origins for debugging
-app.use((req, res, next) => {
-  console.log('Request origin:', req.headers.origin);
-  console.log('Allowed origins:', allowedOrigins);
-  next();
-});
-
-// CORS middleware BEFORE any routes
+// CORS middleware BEFORE any routes: allow all origins
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl), or if origin is in allowed list
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
+  origin: '*'
+  // Do NOT use credentials: true with origin '*'
 }));
 
 app.use(helmet());
